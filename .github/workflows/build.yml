@@ -1,0 +1,51 @@
+name: Build ipk
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build both ipk container formats
+        run: python3 tools/build_ipk.py
+
+      - name: Verify container layout
+        run: |
+          python3 - <<'EOF'
+          import gzip, io, sys, tarfile, zlib
+          from pathlib import Path
+
+          for pkg in sorted(Path('build').glob('*.ipk')):
+              blob = pkg.read_bytes()
+              if blob.startswith(b'!<arch>'):
+                  print(f'{pkg.name}: ar container ok')
+                  continue
+              payload = zlib.decompressobj(16 + zlib.MAX_WBITS).decompress(blob)
+              names = tarfile.open(fileobj=io.BytesIO(payload)).getnames()
+              assert names == ['./debian-binary', './control.tar.gz', './data.tar.gz'], names
+              print(f'{pkg.name}: gzip(tar) container ok -> {names}')
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luci-app-hpswitch-ipk
+          path: build/*.ipk
+
+      - name: Attach ipk to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/*.ipk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

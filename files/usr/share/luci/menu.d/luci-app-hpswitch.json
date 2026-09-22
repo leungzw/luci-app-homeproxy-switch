@@ -1,0 +1,13 @@
+{
+	"admin/services/homeproxy/switch": {
+		"title": "Proxy Switch",
+		"order": 5,
+		"action": {
+			"type": "view",
+			"path": "hpswitch/switch"
+		},
+		"depends": {
+			"acl": [ "luci-app-hpswitch" ]
+		}
+	}
+}

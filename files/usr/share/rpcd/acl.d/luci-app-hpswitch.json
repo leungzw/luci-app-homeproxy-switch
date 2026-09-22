@@ -1,0 +1,23 @@
+{
+	"luci-app-hpswitch": {
+		"description": "HomeProxy master switch",
+		"read": {
+			"file": {
+				"/usr/bin/hpswitch": [ "exec" ]
+			},
+			"ubus": {
+				"service": [ "list" ]
+			},
+			"uci": [ "homeproxy" ]
+		},
+		"write": {
+			"file": {
+				"/usr/bin/hpswitch": [ "exec" ]
+			},
+			"ubus": {
+				"service": [ "list" ]
+			},
+			"uci": [ "homeproxy" ]
+		}
+	}
+}

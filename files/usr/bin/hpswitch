@@ -1,0 +1,72 @@
+#!/bin/sh
+# hpswitch - HomeProxy master switch (backend for the LuCI switch page)
+# Usage: hpswitch <full|self|off|status>
+#
+#   full  : enable + start service, LAN devices transparently proxied
+#   self  : enable + start service, router itself only (LAN proxy off)
+#   off   : stop + disable service, no proxy at all
+#   status: print {"running":0|1,"boot":0|1,"mode":"full|self|off"}
+
+SVC="homeproxy"
+
+svc_running() {
+	/etc/init.d/$SVC status >/dev/null 2>&1 && echo 1 || echo 0
+}
+
+boot_enabled() {
+	[ -L /etc/rc.d/S99$SVC ] && echo 1 || echo 0
+}
+
+lan_mode() {
+	uci -q get homeproxy.control.lan_proxy_mode 2>/dev/null
+}
+
+current_mode() {
+	if [ "$(svc_running)" = "0" ]; then
+		echo "off"
+	elif [ "$(lan_mode)" = "disabled" ]; then
+		echo "self"
+	else
+		echo "full"
+	fi
+}
+
+emit() {
+	printf '{"running":%s,"boot":%s,"mode":"%s"}\n' \
+		"$(svc_running)" "$(boot_enabled)" "$(current_mode)"
+}
+
+case "$1" in
+	full)
+		uci -q set homeproxy.control.lan_proxy_mode="except_listed"
+		uci -q commit homeproxy
+		/etc/init.d/$SVC enable >/dev/null 2>&1
+		/etc/init.d/$SVC restart >/dev/null 2>&1
+		[ "$(svc_running)" = "0" ] && /etc/init.d/$SVC start >/dev/null 2>&1
+		;;
+	self)
+		uci -q set homeproxy.control.lan_proxy_mode="disabled"
+		uci -q commit homeproxy
+		/etc/init.d/$SVC enable >/dev/null 2>&1
+		/etc/init.d/$SVC restart >/dev/null 2>&1
+		[ "$(svc_running)" = "0" ] && /etc/init.d/$SVC start >/dev/null 2>&1
+		;;
+	off)
+		/etc/init.d/$SVC stop >/dev/null 2>&1
+		/etc/init.d/$SVC disable >/dev/null 2>&1
+		# safety net: make sure no sing-box client survives
+		pkill -9 -f "sing-box-c.json" 2>/dev/null
+		sleep 1
+		;;
+	status)
+		emit
+		exit 0
+		;;
+	*)
+		echo "Usage: hpswitch full|self|off|status" >&2
+		exit 1
+		;;
+esac
+
+emit
+exit 0
