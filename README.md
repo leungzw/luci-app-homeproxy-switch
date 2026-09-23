@@ -47,10 +47,25 @@ luci-app-homeproxy 自带页面里**没有客户端总开关**：
 
 到 [Releases](https://github.com/leungzw/luci-app-homeproxy-switch/releases) 下载对应文件：
 
-| 文件 | 适用固件 |
-|---|---|
-| `luci-app-homeproxy-switch_<ver>_all.ipk` | OpenWrt 24.10+ / ImmortalWrt 24.10+ |
-| `luci-app-homeproxy-switch_<ver>_all.legacy.ipk` | OpenWrt 23.05 及更早 |
+| 文件 | 适用固件 | 包管理器 |
+|---|---|---|
+| `luci-app-homeproxy-switch_<ver>_all.apk` | **OpenWrt 25.x** | `apk`（ADB v3 容器）|
+| `luci-app-homeproxy-switch_<ver>_all.ipk` | OpenWrt 24.10+ / ImmortalWrt 24.10+ | `opkg` |
+| `luci-app-homeproxy-switch_<ver>_all.legacy.ipk` | OpenWrt 23.05 及更早 | `opkg`（传统 ar 格式）|
+
+### OpenWrt 25.x（apk）
+
+OpenWrt 25 换用 `apk` 作为包管理器，包是 ADB v3 容器（文件头 `ADBd`）。下载后直接装：
+
+```sh
+cd /tmp
+wget https://github.com/leungzw/luci-app-homeproxy-switch/releases/latest/download/luci-app-homeproxy-switch_1.0.0-1_all.apk
+apk add --allow-untrusted ./luci-app-homeproxy-switch_1.0.0-1_all.apk
+```
+
+> 24.10 之前的 opkg 固件**不认** `.apk`，请用上面的 `.ipk`；反过来 25.x 的 apk 固件也不认 `.ipk`。
+
+### OpenWrt 24.10 / ImmortalWrt 24.10（opkg）
 
 ```sh
 cd /tmp
@@ -96,7 +111,12 @@ git clone https://github.com/leungzw/luci-app-homeproxy-switch
 cd luci-app-homeproxy-switch
 python3 tools/build_ipk.py          # 输出到 build/，同时生成两种容器格式
 python3 tools/build_ipk.py -r 2     # 改 release 号
+python3 tools/build_apk.py -t v3    # OpenWrt 25 的 apk（ADB v3 容器）
 ```
+
+`build_apk.py` 不需要任何工具链，纯 Python 直接拼出 apk：
+`SOURCE_DATE_EPOCH=0 python3 tools/build_apk.py -t v3` 可复现构建。
+（v2 是 Alpine 旧格式，apk-tools 3 在 OpenWrt 25 上实际用的是 v3，故默认只产 v3。）
 
 有 OpenWrt SDK 的话也可以用标准流程编译：
 

@@ -1,4 +1,4 @@
-name: Build ipk
+name: Build packages
 
 on:
   push:
@@ -30,10 +30,11 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Build both ipk container formats
+      # --- ipk (OpenWrt / ImmortalWrt 23.05 and 24.10) -----------------------
+      - name: Build ipk (both container formats)
         run: python3 tools/build_ipk.py
 
-      - name: Verify container layout
+      - name: Verify ipk container layout
         run: |
           python3 - <<'EOF'
           import gzip, io, sys, tarfile, zlib
@@ -50,17 +51,39 @@ jobs:
               print(f'{pkg.name}: gzip(tar) container ok -> {names}')
           EOF
 
+      # --- apk (OpenWrt 25.x, apk-tools 3 / ADB v3 container) ----------------
+      - name: Build apk (OpenWrt 25, ADB v3)
+        run: python3 tools/build_apk.py -t v3
+
+      - name: Verify apk container (ADBd + deflate)
+        run: |
+          python3 - <<'EOF'
+          import zlib
+          from pathlib import Path
+
+          for pkg in sorted(Path('build').glob('*.apk')):
+              blob = pkg.read_bytes()
+              assert blob[:4] == b'ADBd', f'{pkg.name}: bad magic {blob[:4]!r}'
+              inner = zlib.decompressobj(-15).decompress(blob[4:])
+              assert inner[:4] == b'ADB.', f'{pkg.name}: bad container header'
+              print(f'{pkg.name}: ADB v3 container ok ({len(blob)} bytes)')
+          EOF
+
       - uses: actions/upload-artifact@v6
         with:
-          name: luci-app-homeproxy-switch-ipk
-          path: build/*.ipk
+          name: luci-app-homeproxy-switch-packages
+          path: |
+            build/*.ipk
+            build/*.apk
           if-no-files-found: error
 
-      - name: Attach ipk to release
+      - name: Attach packages to release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3
         with:
-          files: build/*.ipk
+          files: |
+            build/*.ipk
+            build/*.apk
           generate_release_notes: true
           fail_on_unmatched_files: true
         env:
