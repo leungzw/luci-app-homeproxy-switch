@@ -7,13 +7,26 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Least privilege by default; the release job widens `contents` to write so it
+# can create the Release and upload assets. Without this the step fails with
+# "Resource not accessible by integration".
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pin the runner image: `ubuntu-latest` migrates to Ubuntu 26 in Oct 2026.
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -37,15 +50,18 @@ jobs:
               print(f'{pkg.name}: gzip(tar) container ok -> {names}')
           EOF
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: luci-app-homeproxy-switch-ipk
           path: build/*.ipk
+          if-no-files-found: error
 
       - name: Attach ipk to release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: build/*.ipk
+          generate_release_notes: true
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
