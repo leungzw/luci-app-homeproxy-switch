@@ -27,9 +27,10 @@ import sys
 import tarfile
 from pathlib import Path
 
-PKG_NAME = "luci-app-hpswitch"
+PKG_NAME = "luci-app-homeproxy-switch"
 ARCHIVE_MODE = 0o100644
 SCRIPT_MODE = 0o100755
+DIR_MODE = 0o40755
 ENDIAN_MAGIC = b"`\n"
 
 
@@ -46,24 +47,41 @@ def collect_files(files_dir: Path):
     return entries
 
 
-def make_targz(target: Path, members):
-    """members: list of (source_path|None, arcname, content_bytes|None, mode)"""
+def dir_specs(arcnames):
+    """Parent directory entries.
+
+    opkg unpacks the data tarball entry by entry and does not create missing
+    parents on its own -- leaving the directories out makes it fail with
+    `wfopen: <path>: No such file or directory` while still reporting the
+    package as installed.  Official packages always ship these entries.
+    """
+    seen = {"."}
+    for arcname in arcnames:
+        parts = arcname.split("/")
+        for i in range(2, len(parts)):
+            seen.add("/".join(parts[:i]))
+    return [{"name": name, "mode": DIR_MODE, "isdir": True} for name in sorted(seen)]
+
+
+def make_targz(target: Path, specs):
+    """specs: dicts with name + either src (file) or content (bytes) or isdir."""
     with tarfile.open(target, "w:gz", format=tarfile.USTAR_FORMAT) as tf:
-        for src, arcname, content, mode in members:
-            if content is not None:
-                info = tarfile.TarInfo(arcname)
-                info.size = len(content)
-                info.mtime = 0
-                info.mode = mode
-                info.uid = info.gid = 0
-                info.uname = info.gname = "root"
-                tf.addfile(info, io.BytesIO(content))
+        for spec in specs:
+            info = tarfile.TarInfo(spec["name"])
+            info.mtime = 0
+            info.mode = spec.get("mode", ARCHIVE_MODE)
+            info.uid = info.gid = 0
+            info.uname = info.gname = "root"
+            if spec.get("isdir"):
+                info.type = tarfile.DIRTYPE
+                tf.addfile(info)
+            elif "content" in spec:
+                payload = spec["content"]
+                info.size = len(payload)
+                tf.addfile(info, io.BytesIO(payload))
             else:
-                info = tf.gettarinfo(str(src), arcname=arcname)
-                info.mtime = 0
-                info.mode = mode
-                info.uid = info.gid = 0
-                info.uname = info.gname = "root"
+                src = Path(spec["src"])
+                info.size = src.stat().st_size
                 with open(src, "rb") as fh:
                     tf.addfile(info, fh)
 
@@ -125,8 +143,11 @@ def build(args) -> list:
     data_tgz = out_dir / "data.tar.gz"
     control_tgz = out_dir / "control.tar.gz"
 
-    make_targz(data_tgz, [(src, arcname, None, SCRIPT_MODE if "bin/" in arcname else ARCHIVE_MODE)
-                          for src, arcname in entries])
+    make_targz(data_tgz, dir_specs([a for _, a in entries]) + [
+        {"name": arcname, "src": src,
+         "mode": SCRIPT_MODE if "bin/" in arcname else ARCHIVE_MODE}
+        for src, arcname in entries
+    ])
 
     postinst = b"""#!/bin/sh
 rm -f /tmp/luci-indexcache* /tmp/luci-modulecache*
@@ -144,10 +165,10 @@ exit 0
     ).encode()
 
     make_targz(control_tgz, [
-        (None, "./control", control, ARCHIVE_MODE),
-        (None, "./md5sums", ("\n".join(md5_lines) + "\n").encode(), ARCHIVE_MODE),
-        (None, "./postinst", postinst, SCRIPT_MODE),
-        (None, "./postrm", postinst, SCRIPT_MODE),
+        {"name": "./control", "content": control},
+        {"name": "./md5sums", "content": ("\n".join(md5_lines) + "\n").encode()},
+        {"name": "./postinst", "content": postinst, "mode": SCRIPT_MODE},
+        {"name": "./postrm", "content": postinst, "mode": SCRIPT_MODE},
     ])
 
     control_blob = control_tgz.read_bytes()

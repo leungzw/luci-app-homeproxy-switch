@@ -39,7 +39,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: luci-app-hpswitch-ipk
+          name: luci-app-homeproxy-switch-ipk
           path: build/*.ipk
 
       - name: Attach ipk to release

@@ -1,14 +1,14 @@
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=luci-app-hpswitch
+PKG_NAME:=luci-app-homeproxy-switch
 PKG_VERSION:=1.0.0
 PKG_RELEASE:=1
 
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=LICENSE
-PKG_MAINTAINER:=CHANGE_ME <CHANGE_ME@example.com>
+PKG_MAINTAINER:=leungzw <leungzw@users.noreply.github.com>
 
-PKG_SOURCE_URL:=https://github.com/CHANGE_ME/luci-app-hpswitch
+PKG_SOURCE_URL:=https://github.com/leungzw/luci-app-homeproxy-switch
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_VERSION:=v$(PKG_VERSION)
 
@@ -51,7 +51,7 @@ endef
 
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) ./files/usr/bin/hpswitch $(1)/usr/bin/hpswitch
+	$(INSTALL_BIN) ./files/usr/bin/homeproxy-switch $(1)/usr/bin/homeproxy-switch
 
 	$(INSTALL_DIR) $(1)/usr/share/rpcd/acl.d
 	$(INSTALL_CONF) ./files/usr/share/rpcd/acl.d/$(PKG_NAME).json \
@@ -61,9 +61,9 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_CONF) ./files/usr/share/luci/menu.d/$(PKG_NAME).json \
 		$(1)/usr/share/luci/menu.d/$(PKG_NAME).json
 
-	$(INSTALL_DIR) $(1)/www/luci-static/resources/view/hpswitch
-	$(INSTALL_CONF) ./files/www/luci-static/resources/view/hpswitch/switch.js \
-		$(1)/www/luci-static/resources/view/hpswitch/switch.js
+	$(INSTALL_DIR) $(1)/www/luci-static/resources/view/homeproxy-switch
+	$(INSTALL_CONF) ./files/www/luci-static/resources/view/homeproxy-switch/switch.js \
+		$(1)/www/luci-static/resources/view/homeproxy-switch/switch.js
 endef
 
 define Package/$(PKG_NAME)/postinst

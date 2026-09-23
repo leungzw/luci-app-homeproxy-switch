@@ -10,9 +10,9 @@ const callExec = rpc.declare({
 });
 
 function readStatus() {
-	return L.resolveDefault(callExec('/usr/bin/hpswitch', [ 'status' ]), null).then(function(res) {
+	return L.resolveDefault(callExec('/usr/bin/homeproxy-switch', [ 'status' ]), null).then(function(res) {
 		if (!res)
-			return { mode: 'error', raw: _('ubus 调用失败：权限不足或超时（检查 rpcd ACL 里是否放行 /usr/bin/hpswitch 的 exec）') };
+			return { mode: 'error', raw: _('ubus 调用失败：权限不足或超时（检查 rpcd ACL 里是否放行 /usr/bin/homeproxy-switch 的 exec）') };
 
 		var out = (res.stdout) ? String(res.stdout).trim() : '';
 
@@ -75,7 +75,7 @@ return view.extend({
 			btnOn.disabled = btnSelf.disabled = btnOff.disabled = true;
 			repaint({ running: false, boot: false, mode: 'busy' });
 
-			callExec('/usr/bin/hpswitch', [ mode ]).then(function(res) {
+			callExec('/usr/bin/homeproxy-switch', [ mode ]).then(function(res) {
 				if (res && res.code !== 0)
 					throw new Error(_('脚本退出码 ') + res.code + '：' + (res.stderr || res.stdout || ''));
 				return readStatus();

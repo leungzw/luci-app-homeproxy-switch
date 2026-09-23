@@ -4,10 +4,10 @@
 		"order": 5,
 		"action": {
 			"type": "view",
-			"path": "hpswitch/switch"
+			"path": "homeproxy-switch/switch"
 		},
 		"depends": {
-			"acl": [ "luci-app-hpswitch" ]
+			"acl": [ "luci-app-homeproxy-switch" ]
 		}
 	}
 }

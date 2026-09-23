@@ -1,6 +1,6 @@
 #!/bin/sh
-# hpswitch - HomeProxy master switch (backend for the LuCI switch page)
-# Usage: hpswitch <full|self|off|status>
+# homeproxy-switch - HomeProxy master switch (backend for the LuCI switch page)
+# Usage: homeproxy-switch <full|self|off|status>
 #
 #   full  : enable + start service, LAN devices transparently proxied
 #   self  : enable + start service, router itself only (LAN proxy off)
@@ -63,7 +63,7 @@ case "$1" in
 		exit 0
 		;;
 	*)
-		echo "Usage: hpswitch full|self|off|status" >&2
+		echo "Usage: homeproxy-switch full|self|off|status" >&2
 		exit 1
 		;;
 esac
